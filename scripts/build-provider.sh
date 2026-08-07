@@ -8,5 +8,5 @@ docker run --rm \
   -v "$HOME/.m2":/root/.m2 \
   -w /build maven:3.9-eclipse-temurin-21 mvn -q -B -Dmaven.test.skip=true package
 mkdir -p providers
-cp providers-src/target/acr-exact-condition.jar providers/
-echo "Built providers/acr-exact-condition.jar"
+cp providers-src/target/keycloak-poc-providers.jar providers/
+echo "Built providers/keycloak-poc-providers.jar"

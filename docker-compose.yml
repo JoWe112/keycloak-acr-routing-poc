@@ -27,8 +27,8 @@ services:
       - "${KC_HTTPS_PORT:-8443}:8443"
     volumes:
       - ./realm:/opt/keycloak/data/import:ro
-      # Custom SPIs: conditional-acr-exact + require-passkey-enrolment.
-      - ./providers/acr-exact-condition.jar:/opt/keycloak/providers/acr-exact-condition.jar:ro
+      # Custom SPI: require-passkey-enrolment (ACR routing is native, via client policies).
+      - ./providers/keycloak-poc-providers.jar:/opt/keycloak/providers/keycloak-poc-providers.jar:ro
       # Demo PKI (server cert, CA truststore, alice's client cert) for X.509.
       - ./certs:/opt/keycloak/certs:ro
       # Mount the whole data dir (exists in the image, owned by the keycloak

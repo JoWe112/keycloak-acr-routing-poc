@@ -11,19 +11,18 @@ the custom provider JAR mounted (see providers/ and docker-compose.yml).
 Usage:   python3 scripts/build_realm.py
 Env:     KC_URL (default http://localhost:8080), KC_ADMIN, KC_ADMIN_PASSWORD
 
-Two browser flows are built to compare approaches to ACR-driven step-up:
+ACR-driven method selection is done NATIVELY (Keycloak 26.2+ client policies:
+`acr-condition` + `auth-flow-enforcer`). Client `postman` is routed to one of three
+flows by the requested ACR:
 
-  1. browser-acr-exact  (client `postman`)
-     Uses the custom `conditional-acr-highest` condition (highest of the requested
-     acr_values == level, RFC 9470). Disjoint selection: loa/low -> password;
-     loa/high -> passkey; loa/x509 (default) -> client certificate.
+  loa/low  -> flow-password   (username + password)
+  loa/high -> flow-passkey    (identity-first passkey; passkey-less -> password + enrol)
+  loa/x509 -> flow-x509       (X.509 client certificate; also the client's default ACR)
 
-  2. browser-stepup-cumulative  (client `postman-cumulative`)
-     Uses the built-in `conditional-level-of-authentication` (cumulative).
-     loa/low -> password only;  default -> password THEN passkey (step-up).
-
-Both clients carry the ACR->LoA map, default.acr.values = high, and the built-in
-AMR protocol mapper so tokens include `amr` (pwd / hwk).
+Client `postman-cumulative` keeps the built-in cumulative `conditional-level-of-authentication`
+flow (loa/low -> password; default -> password THEN passkey) as a contrast, and is NOT
+tagged for routing so the policies skip it. The only custom SPI is `require-passkey-enrolment`.
+Both clients carry the realm ACR->LoA map and the built-in AMR protocol mapper (`amr`).
 """
 import json
 import os

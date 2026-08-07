@@ -1,12 +1,13 @@
 /*
- * Integration test for the custom "Condition - ACR value (exact LoA match)" SPI.
+ * Integration test for the native ACR routing (client policies: acr-condition +
+ * auth-flow-enforcer) plus the require-passkey-enrolment SPI.
  *
  * Boots a real Keycloak 26.4 container with this provider mounted and the actual
  * poc realm imported (../realm/poc-realm.json), then drives full authorization-code
- * + PKCE logins over HTTP and asserts the resulting acr / amr claims. This proves
- * the exact-match routing end-to-end:
- *   - client `postman` (exact):  acr/low -> password only (acr=low, amr=pwd)
- *                                default  -> passkey subflow (acr=high, amr=pwd via fallback)
+ * + PKCE logins over HTTP and asserts the resulting acr / amr claims. It proves the
+ * ACR-driven routing end-to-end:
+ *   - client `postman`:  acr/low -> password (acr=low, amr=pwd);
+ *                        acr/high -> identity-first passkey; default -> X.509
  *   - client `postman-cumulative` (built-in): acr/low -> password (acr=low)
  *
  * Passkey ceremonies can't run headlessly, so the tests exercise the password
@@ -43,7 +44,7 @@ import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
-class AcrExactConditionIT {
+class AcrRoutingIT {
 
     private static final String REALM = "poc";
     private static final String REDIRECT = "https://oauth.pstmn.io/v1/callback";

@@ -4,7 +4,7 @@
 set -euo pipefail
 cd "$(dirname "$0")/.."
 [ -f .env ] || cp .env.example .env
-[ -f providers/acr-exact-condition.jar ] || ./scripts/build-provider.sh
+[ -f providers/keycloak-poc-providers.jar ] || ./scripts/build-provider.sh
 [ -f certs/server.crt ] || ./scripts/gen-certs.sh   # demo PKI for the X.509 login option
 docker compose up -d
 echo "Waiting for Keycloak to become healthy..."
