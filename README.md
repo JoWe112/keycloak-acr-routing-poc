@@ -72,6 +72,22 @@ ACR→method routing is **native** (client policies: `acr-condition` picks a flo
 The only custom code is one small authenticator in `providers-src/` — **`require-passkey-enrolment`**
 (session-scoped "create a passkey" for a passkey-less user). Everything else is stock Keycloak.
 
+### Custom SPI: `require-passkey-enrolment`
+
+Passwordless login needs an existing passkey, so a passkey-less user has to be bootstrapped onto one.
+Keycloak has no *in-flow* passkey-registration authenticator — enrolment only runs as the
+`webauthn-register-passwordless` **required action** — and this tiny authenticator is what triggers it.
+It sits at the end of the passkey flow's password fallback (`flow-passkey` → `pk-no`), so it only fires
+after a passkey-less user has **verified with a password**; "no verification → register" would let anyone
+enrol a passkey onto any username.
+
+The one detail that matters: it adds the required action to the **authentication session**
+(`AuthenticationSessionModel.addRequiredAction`), not to the user account. A user-level required action
+would persist and re-prompt on *every* future login (including the password-only `loa/low` path); the
+session-scoped one applies to this login only, then it's gone. See
+[docs/authentication-flow.md](docs/authentication-flow.md#passkey-enrolment-offer-to-create-one) for the
+full write-up, and [README.md](#production-hardening) for the internal-API caveat.
+
 ---
 
 ## Quick start
