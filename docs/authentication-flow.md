@@ -204,3 +204,21 @@ asserts:
 This exercises the whole native routing end-to-end: if a client policy or `require-passkey-enrolment`
 were missing or wrong, the flow would route incorrectly and the tests would fail. Run it with
 `./scripts/it.sh` (needs local JDK 21 + Maven + a container engine).
+
+## Further reading — Keycloak documentation
+
+Each concept this PoC relies on is documented upstream (Keycloak *Server Administration Guide*, `latest`):
+
+| Concept in this doc | Keycloak documentation |
+|---|---|
+| ACR → Level of Authentication (LoA) realm mapping (`acr.loa.map`) | [Mapping ACR to LoA at the realm](https://www.keycloak.org/docs/latest/server_admin/index.html#_mapping-acr-to-loa-realm) |
+| **ACR selects a whole flow** (`acr-condition` + `auth-flow-enforcer`) — the core of this PoC | [Using client policies to select an authentication flow](https://www.keycloak.org/docs/latest/server_admin/index.html#_client-policy-auth-flow) |
+| Client policies (profiles, conditions, executors) | [Client policies](https://www.keycloak.org/docs/latest/server_admin/index.html#_client_policies) |
+| The routing-target flows and conditional sub-flows | [Authentication flows](https://www.keycloak.org/docs/latest/server_admin/index.html#_authentication-flows) |
+| Passkey / passwordless WebAuthn login | [Passkeys](https://www.keycloak.org/docs/latest/server_admin/index.html#passkeys_server_administration_guide) · [Passwordless WebAuthn](https://www.keycloak.org/docs/latest/server_admin/index.html#_webauthn_passwordless) |
+| `webauthn-register-passwordless` as a required action (what `require-passkey-enrolment` triggers) | [Required actions](https://www.keycloak.org/docs/latest/server_admin/index.html#con-required-actions_server_administration_guide) |
+| X.509 client-certificate authentication | [X.509 client certificate user authentication](https://www.keycloak.org/docs/latest/server_admin/index.html#_x509) |
+
+The custom `require-passkey-enrolment` authenticator is built against the
+[Authentication SPI](https://www.keycloak.org/docs/latest/server_development/index.html#_auth_spi)
+(*Server Development Guide*).
