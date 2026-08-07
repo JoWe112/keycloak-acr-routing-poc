@@ -1,0 +1,9 @@
+.env
+*.log
+.DS_Store
+
+# Maven build output (the built JAR is kept in providers/ for one-command bring-up)
+providers-src/target/
+
+# Demo PKI for X.509 (regenerate with scripts/gen-certs.sh)
+certs/

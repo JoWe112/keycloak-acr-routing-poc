@@ -1,0 +1,1213 @@
+{
+  "info": {
+    "_postman_id": "873205ce-0add-4bb1-b022-f4731007c6cb",
+    "name": "Keycloak ACR Step-up POC",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
+    "description": "Passkey/password step-up POC (Keycloak 26.4). OAuth 2.0 Authorization Code + PKCE, PUBLIC clients (no secret).\n\nRun a request: Authorization tab > **Get New Access Token** > log in as **alice / alice** > **Use Token** > **Send**. The `acr`/`amr` claims are NOT in the userinfo body \u2014 they live in the token, so after Send open the **Visualize** tab (and the Postman Console) to see them decoded. The raw token is saved to the `accessToken` collection variable.\n\nThe ACR path is baked into each request's Auth URL. This collection uses \"Authorize using browser\" (your system browser), which supports real passkeys \u2014 so the default passkey path can complete there too. Ensure https://oauth.pstmn.io/v1/callback is allowed (it is, on these clients)."
+  },
+  "variable": [
+    {
+      "key": "baseUrl",
+      "value": "http://localhost:8080"
+    },
+    {
+      "key": "realm",
+      "value": "poc"
+    },
+    {
+      "key": "clientExact",
+      "value": "postman"
+    },
+    {
+      "key": "clientCumulative",
+      "value": "postman-cumulative"
+    },
+    {
+      "key": "redirectUri",
+      "value": "https://oauth.pstmn.io/v1/callback"
+    },
+    {
+      "key": "accessToken",
+      "value": ""
+    },
+    {
+      "key": "baseUrlHttps",
+      "value": "https://localhost:8443"
+    }
+  ],
+  "item": [
+    {
+      "name": "Exact client (postman)",
+      "description": "Custom exact-match flow: default = passkey only, loa/low = password only.",
+      "item": [
+        {
+          "name": "Default (no acr_values \u2192 X.509)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "// Decode the Bearer access token Postman injected, log + visualize acr/amr.",
+                  "const auth = pm.request.headers.get('Authorization') || '';",
+                  "const jwt = auth.replace(/^Bearer\\s+/i, '');",
+                  "const parts = jwt.split('.');",
+                  "if (parts.length === 3) {",
+                  "  let b = parts[1].replace(/-/g, '+').replace(/_/g, '/');",
+                  "  while (b.length % 4) b += '=';",
+                  "  const c = JSON.parse(Buffer.from(b, 'base64').toString('utf8'));",
+                  "  pm.collectionVariables.set('accessToken', jwt);",
+                  "  console.log('acr =', c.acr, '| amr =', JSON.stringify(c.amr));",
+                  "  pm.test('acr claim present', () => pm.expect(c).to.have.property('acr'));",
+                  "  pm.test('amr claim present', () => pm.expect(c).to.have.property('amr'));",
+                  "  const tpl =",
+                  "    '<style>body{font-family:-apple-system,sans-serif;padding:8px}' +",
+                  "    'table{border-collapse:collapse;width:100%}td,th{border:1px solid #ccc;padding:6px 10px;text-align:left}' +",
+                  "    'th{background:#f4f4f4;white-space:nowrap}code{word-break:break-all;font-size:11px}</style>' +",
+                  "    '<h3>Access-token claims</h3><table>' +",
+                  "    '<tr><th>acr</th><td>{{acr}}</td></tr>' +",
+                  "    '<tr><th>amr</th><td>{{amr}}</td></tr>' +",
+                  "    '<tr><th>azp</th><td>{{azp}}</td></tr>' +",
+                  "    '<tr><th>preferred_username</th><td>{{user}}</td></tr>' +",
+                  "    '</table><p>Full token saved to collection variable <code>accessToken</code> ' +",
+                  "    '(Collection &rarr; Variables). Open the <b>Visualize</b> tab to see this.</p>';",
+                  "  pm.visualizer.set(tpl, { acr: c.acr, amr: JSON.stringify(c.amr), azp: c.azp, user: c.preferred_username });",
+                  "} else {",
+                  "  console.log('No JWT bearer yet \u2014 click \"Get New Access Token\", Use Token, then Send.');",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "auth": {
+              "type": "oauth2",
+              "oauth2": [
+                {
+                  "key": "tokenName",
+                  "value": "KC exact default",
+                  "type": "string"
+                },
+                {
+                  "key": "grant_type",
+                  "value": "authorization_code_with_pkce",
+                  "type": "string"
+                },
+                {
+                  "key": "authUrl",
+                  "value": "{{baseUrlHttps}}/realms/{{realm}}/protocol/openid-connect/auth",
+                  "type": "string"
+                },
+                {
+                  "key": "accessTokenUrl",
+                  "value": "{{baseUrlHttps}}/realms/{{realm}}/protocol/openid-connect/token",
+                  "type": "string"
+                },
+                {
+                  "key": "clientId",
+                  "value": "{{clientExact}}",
+                  "type": "string"
+                },
+                {
+                  "key": "redirect_uri",
+                  "value": "{{redirectUri}}",
+                  "type": "string"
+                },
+                {
+                  "key": "scope",
+                  "value": "openid profile",
+                  "type": "string"
+                },
+                {
+                  "key": "state",
+                  "value": "poc",
+                  "type": "string"
+                },
+                {
+                  "key": "challengeAlgorithm",
+                  "value": "S256",
+                  "type": "string"
+                },
+                {
+                  "key": "client_authentication",
+                  "value": "body",
+                  "type": "string"
+                },
+                {
+                  "key": "addTokenTo",
+                  "value": "header",
+                  "type": "string"
+                },
+                {
+                  "key": "useBrowser",
+                  "value": true,
+                  "type": "boolean"
+                }
+              ]
+            },
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrlHttps}}/realms/{{realm}}/protocol/openid-connect/userinfo",
+              "host": [
+                "{{baseUrlHttps}}"
+              ],
+              "path": [
+                "realms",
+                "{{realm}}",
+                "protocol",
+                "openid-connect",
+                "userinfo"
+              ]
+            },
+            "description": "No acr_values at all -> the client's default.acr.values (=\u2026/loa/x509) applies, so this is the DEFAULT login method: X.509 client certificate over mutual TLS (:8443), no password fallback.\n\nSame prereqs as the explicit X.509 request: 'Authorize using browser' ON, and import certs/alice.p12 (password 'changeit') into your OS keychain / browser cert store so the system browser presents alice's cert. Result: acr=\u2026/loa/x509, amr=[\"x509\"] (Visualize tab). With no certificate the login is refused."
+          },
+          "response": []
+        },
+        {
+          "name": "Passkey (loa/high)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "// Decode the Bearer access token Postman injected, log + visualize acr/amr.",
+                  "const auth = pm.request.headers.get('Authorization') || '';",
+                  "const jwt = auth.replace(/^Bearer\\s+/i, '');",
+                  "const parts = jwt.split('.');",
+                  "if (parts.length === 3) {",
+                  "  let b = parts[1].replace(/-/g, '+').replace(/_/g, '/');",
+                  "  while (b.length % 4) b += '=';",
+                  "  const c = JSON.parse(Buffer.from(b, 'base64').toString('utf8'));",
+                  "  pm.collectionVariables.set('accessToken', jwt);",
+                  "  console.log('acr =', c.acr, '| amr =', JSON.stringify(c.amr));",
+                  "  pm.test('acr claim present', () => pm.expect(c).to.have.property('acr'));",
+                  "  pm.test('amr claim present', () => pm.expect(c).to.have.property('amr'));",
+                  "  const tpl =",
+                  "    '<style>body{font-family:-apple-system,sans-serif;padding:8px}' +",
+                  "    'table{border-collapse:collapse;width:100%}td,th{border:1px solid #ccc;padding:6px 10px;text-align:left}' +",
+                  "    'th{background:#f4f4f4;white-space:nowrap}code{word-break:break-all;font-size:11px}</style>' +",
+                  "    '<h3>Access-token claims</h3><table>' +",
+                  "    '<tr><th>acr</th><td>{{acr}}</td></tr>' +",
+                  "    '<tr><th>amr</th><td>{{amr}}</td></tr>' +",
+                  "    '<tr><th>azp</th><td>{{azp}}</td></tr>' +",
+                  "    '<tr><th>preferred_username</th><td>{{user}}</td></tr>' +",
+                  "    '</table><p>Full token saved to collection variable <code>accessToken</code> ' +",
+                  "    '(Collection &rarr; Variables). Open the <b>Visualize</b> tab to see this.</p>';",
+                  "  pm.visualizer.set(tpl, { acr: c.acr, amr: JSON.stringify(c.amr), azp: c.azp, user: c.preferred_username });",
+                  "} else {",
+                  "  console.log('No JWT bearer yet \u2014 click \"Get New Access Token\", Use Token, then Send.');",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "auth": {
+              "type": "oauth2",
+              "oauth2": [
+                {
+                  "key": "tokenName",
+                  "value": "Default \u2192 passkey (acr=high)",
+                  "type": "string"
+                },
+                {
+                  "key": "grant_type",
+                  "value": "authorization_code_with_pkce",
+                  "type": "string"
+                },
+                {
+                  "key": "authUrl",
+                  "value": "{{baseUrl}}/realms/{{realm}}/protocol/openid-connect/auth?acr_values=http://example.com/loa/high",
+                  "type": "string"
+                },
+                {
+                  "key": "accessTokenUrl",
+                  "value": "{{baseUrl}}/realms/{{realm}}/protocol/openid-connect/token",
+                  "type": "string"
+                },
+                {
+                  "key": "clientId",
+                  "value": "{{clientExact}}",
+                  "type": "string"
+                },
+                {
+                  "key": "redirect_uri",
+                  "value": "{{redirectUri}}",
+                  "type": "string"
+                },
+                {
+                  "key": "scope",
+                  "value": "openid profile",
+                  "type": "string"
+                },
+                {
+                  "key": "state",
+                  "value": "poc",
+                  "type": "string"
+                },
+                {
+                  "key": "challengeAlgorithm",
+                  "value": "S256",
+                  "type": "string"
+                },
+                {
+                  "key": "client_authentication",
+                  "value": "body",
+                  "type": "string"
+                },
+                {
+                  "key": "addTokenTo",
+                  "value": "header",
+                  "type": "string"
+                },
+                {
+                  "key": "useBrowser",
+                  "value": true,
+                  "type": "boolean"
+                }
+              ]
+            },
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/realms/{{realm}}/protocol/openid-connect/userinfo",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "realms",
+                "{{realm}}",
+                "protocol",
+                "openid-connect",
+                "userinfo"
+              ]
+            },
+            "description": "Identity-first passkey (acr_values=\u2026/loa/high). Enter the username: passkey holders log in with their passkey (amr=hwk); passkey-less users verify with a password and are offered to create one. (No acr_values now means X.509 \u2014 the default \u2014 so passkey is requested explicitly.)"
+          },
+          "response": []
+        },
+        {
+          "name": "2 acr_values (low high \u2192 highest=passkey)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "// Decode the Bearer access token Postman injected, log + visualize acr/amr.",
+                  "const auth = pm.request.headers.get('Authorization') || '';",
+                  "const jwt = auth.replace(/^Bearer\\s+/i, '');",
+                  "const parts = jwt.split('.');",
+                  "if (parts.length === 3) {",
+                  "  let b = parts[1].replace(/-/g, '+').replace(/_/g, '/');",
+                  "  while (b.length % 4) b += '=';",
+                  "  const c = JSON.parse(Buffer.from(b, 'base64').toString('utf8'));",
+                  "  pm.collectionVariables.set('accessToken', jwt);",
+                  "  console.log('acr =', c.acr, '| amr =', JSON.stringify(c.amr));",
+                  "  pm.test('acr claim present', () => pm.expect(c).to.have.property('acr'));",
+                  "  pm.test('amr claim present', () => pm.expect(c).to.have.property('amr'));",
+                  "  const tpl =",
+                  "    '<style>body{font-family:-apple-system,sans-serif;padding:8px}' +",
+                  "    'table{border-collapse:collapse;width:100%}td,th{border:1px solid #ccc;padding:6px 10px;text-align:left}' +",
+                  "    'th{background:#f4f4f4;white-space:nowrap}code{word-break:break-all;font-size:11px}</style>' +",
+                  "    '<h3>Access-token claims</h3><table>' +",
+                  "    '<tr><th>acr</th><td>{{acr}}</td></tr>' +",
+                  "    '<tr><th>amr</th><td>{{amr}}</td></tr>' +",
+                  "    '<tr><th>azp</th><td>{{azp}}</td></tr>' +",
+                  "    '<tr><th>preferred_username</th><td>{{user}}</td></tr>' +",
+                  "    '</table><p>Full token saved to collection variable <code>accessToken</code> ' +",
+                  "    '(Collection &rarr; Variables). Open the <b>Visualize</b> tab to see this.</p>';",
+                  "  pm.visualizer.set(tpl, { acr: c.acr, amr: JSON.stringify(c.amr), azp: c.azp, user: c.preferred_username });",
+                  "} else {",
+                  "  console.log('No JWT bearer yet \u2014 click \"Get New Access Token\", Use Token, then Send.');",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "auth": {
+              "type": "oauth2",
+              "oauth2": [
+                {
+                  "key": "tokenName",
+                  "value": "KC exact 2-acr",
+                  "type": "string"
+                },
+                {
+                  "key": "grant_type",
+                  "value": "authorization_code_with_pkce",
+                  "type": "string"
+                },
+                {
+                  "key": "authUrl",
+                  "value": "{{baseUrl}}/realms/{{realm}}/protocol/openid-connect/auth?acr_values=http://example.com/loa/low http://example.com/loa/high",
+                  "type": "string"
+                },
+                {
+                  "key": "accessTokenUrl",
+                  "value": "{{baseUrl}}/realms/{{realm}}/protocol/openid-connect/token",
+                  "type": "string"
+                },
+                {
+                  "key": "clientId",
+                  "value": "{{clientExact}}",
+                  "type": "string"
+                },
+                {
+                  "key": "redirect_uri",
+                  "value": "{{redirectUri}}",
+                  "type": "string"
+                },
+                {
+                  "key": "scope",
+                  "value": "openid profile",
+                  "type": "string"
+                },
+                {
+                  "key": "state",
+                  "value": "poc",
+                  "type": "string"
+                },
+                {
+                  "key": "challengeAlgorithm",
+                  "value": "S256",
+                  "type": "string"
+                },
+                {
+                  "key": "client_authentication",
+                  "value": "body",
+                  "type": "string"
+                },
+                {
+                  "key": "addTokenTo",
+                  "value": "header",
+                  "type": "string"
+                },
+                {
+                  "key": "useBrowser",
+                  "value": true,
+                  "type": "boolean"
+                }
+              ]
+            },
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/realms/{{realm}}/protocol/openid-connect/userinfo",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "realms",
+                "{{realm}}",
+                "protocol",
+                "openid-connect",
+                "userinfo"
+              ]
+            },
+            "description": "Sends TWO space-separated acr_values: loa/low loa/high. the client policies route to the HIGHEST -> loa/high (2) = identity-first PASSKEY. No certificate needed, so this uses the plain-HTTP base. (Keycloak's built-in step-up would instead collapse to the minimum, loa/low = password.)\n\n'Authorize using browser' ON. Log in as alice: enter username; if alice has no passkey yet you verify with the password and are offered to create one; acr=\u2026/loa/high, amr=[\"hwk\"] (or pwd while enrolling). Add \u2026/loa/x509 to the Auth URL to make the highest become x509 (cert required) instead."
+          },
+          "response": []
+        },
+        {
+          "name": "acr=loa/low \u2192 password",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "// Decode the Bearer access token Postman injected, log + visualize acr/amr.",
+                  "const auth = pm.request.headers.get('Authorization') || '';",
+                  "const jwt = auth.replace(/^Bearer\\s+/i, '');",
+                  "const parts = jwt.split('.');",
+                  "if (parts.length === 3) {",
+                  "  let b = parts[1].replace(/-/g, '+').replace(/_/g, '/');",
+                  "  while (b.length % 4) b += '=';",
+                  "  const c = JSON.parse(Buffer.from(b, 'base64').toString('utf8'));",
+                  "  pm.collectionVariables.set('accessToken', jwt);",
+                  "  console.log('acr =', c.acr, '| amr =', JSON.stringify(c.amr));",
+                  "  pm.test('acr claim present', () => pm.expect(c).to.have.property('acr'));",
+                  "  pm.test('amr claim present', () => pm.expect(c).to.have.property('amr'));",
+                  "  const tpl =",
+                  "    '<style>body{font-family:-apple-system,sans-serif;padding:8px}' +",
+                  "    'table{border-collapse:collapse;width:100%}td,th{border:1px solid #ccc;padding:6px 10px;text-align:left}' +",
+                  "    'th{background:#f4f4f4;white-space:nowrap}code{word-break:break-all;font-size:11px}</style>' +",
+                  "    '<h3>Access-token claims</h3><table>' +",
+                  "    '<tr><th>acr</th><td>{{acr}}</td></tr>' +",
+                  "    '<tr><th>amr</th><td>{{amr}}</td></tr>' +",
+                  "    '<tr><th>azp</th><td>{{azp}}</td></tr>' +",
+                  "    '<tr><th>preferred_username</th><td>{{user}}</td></tr>' +",
+                  "    '</table><p>Full token saved to collection variable <code>accessToken</code> ' +",
+                  "    '(Collection &rarr; Variables). Open the <b>Visualize</b> tab to see this.</p>';",
+                  "  pm.visualizer.set(tpl, { acr: c.acr, amr: JSON.stringify(c.amr), azp: c.azp, user: c.preferred_username });",
+                  "} else {",
+                  "  console.log('No JWT bearer yet \u2014 click \"Get New Access Token\", Use Token, then Send.');",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "auth": {
+              "type": "oauth2",
+              "oauth2": [
+                {
+                  "key": "tokenName",
+                  "value": "acr=loa/low \u2192 password",
+                  "type": "string"
+                },
+                {
+                  "key": "grant_type",
+                  "value": "authorization_code_with_pkce",
+                  "type": "string"
+                },
+                {
+                  "key": "authUrl",
+                  "value": "{{baseUrl}}/realms/{{realm}}/protocol/openid-connect/auth?acr_values=http://example.com/loa/low",
+                  "type": "string"
+                },
+                {
+                  "key": "accessTokenUrl",
+                  "value": "{{baseUrl}}/realms/{{realm}}/protocol/openid-connect/token",
+                  "type": "string"
+                },
+                {
+                  "key": "clientId",
+                  "value": "{{clientExact}}",
+                  "type": "string"
+                },
+                {
+                  "key": "redirect_uri",
+                  "value": "{{redirectUri}}",
+                  "type": "string"
+                },
+                {
+                  "key": "scope",
+                  "value": "openid profile",
+                  "type": "string"
+                },
+                {
+                  "key": "state",
+                  "value": "poc",
+                  "type": "string"
+                },
+                {
+                  "key": "challengeAlgorithm",
+                  "value": "S256",
+                  "type": "string"
+                },
+                {
+                  "key": "client_authentication",
+                  "value": "body",
+                  "type": "string"
+                },
+                {
+                  "key": "addTokenTo",
+                  "value": "header",
+                  "type": "string"
+                },
+                {
+                  "key": "useBrowser",
+                  "value": true,
+                  "type": "boolean"
+                }
+              ]
+            },
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/realms/{{realm}}/protocol/openid-connect/userinfo",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "realms",
+                "{{realm}}",
+                "protocol",
+                "openid-connect",
+                "userinfo"
+              ]
+            },
+            "description": "Forces the LoA 1 password-only subflow; token acr = .../loa/low, amr = [pwd]."
+          },
+          "response": []
+        },
+        {
+          "name": "Enroll passkey (kc_action, skippable)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "// Decode the Bearer access token Postman injected, log + visualize acr/amr.",
+                  "const auth = pm.request.headers.get('Authorization') || '';",
+                  "const jwt = auth.replace(/^Bearer\\s+/i, '');",
+                  "const parts = jwt.split('.');",
+                  "if (parts.length === 3) {",
+                  "  let b = parts[1].replace(/-/g, '+').replace(/_/g, '/');",
+                  "  while (b.length % 4) b += '=';",
+                  "  const c = JSON.parse(Buffer.from(b, 'base64').toString('utf8'));",
+                  "  pm.collectionVariables.set('accessToken', jwt);",
+                  "  console.log('acr =', c.acr, '| amr =', JSON.stringify(c.amr));",
+                  "  pm.test('acr claim present', () => pm.expect(c).to.have.property('acr'));",
+                  "  pm.test('amr claim present', () => pm.expect(c).to.have.property('amr'));",
+                  "  const tpl =",
+                  "    '<style>body{font-family:-apple-system,sans-serif;padding:8px}' +",
+                  "    'table{border-collapse:collapse;width:100%}td,th{border:1px solid #ccc;padding:6px 10px;text-align:left}' +",
+                  "    'th{background:#f4f4f4;white-space:nowrap}code{word-break:break-all;font-size:11px}</style>' +",
+                  "    '<h3>Access-token claims</h3><table>' +",
+                  "    '<tr><th>acr</th><td>{{acr}}</td></tr>' +",
+                  "    '<tr><th>amr</th><td>{{amr}}</td></tr>' +",
+                  "    '<tr><th>azp</th><td>{{azp}}</td></tr>' +",
+                  "    '<tr><th>preferred_username</th><td>{{user}}</td></tr>' +",
+                  "    '</table><p>Full token saved to collection variable <code>accessToken</code> ' +",
+                  "    '(Collection &rarr; Variables). Open the <b>Visualize</b> tab to see this.</p>';",
+                  "  pm.visualizer.set(tpl, { acr: c.acr, amr: JSON.stringify(c.amr), azp: c.azp, user: c.preferred_username });",
+                  "} else {",
+                  "  console.log('No JWT bearer yet \u2014 click \"Get New Access Token\", Use Token, then Send.');",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "auth": {
+              "type": "oauth2",
+              "oauth2": [
+                {
+                  "key": "tokenName",
+                  "value": "Enroll passkey (kc_action, skippable)",
+                  "type": "string"
+                },
+                {
+                  "key": "grant_type",
+                  "value": "authorization_code_with_pkce",
+                  "type": "string"
+                },
+                {
+                  "key": "authUrl",
+                  "value": "{{baseUrl}}/realms/{{realm}}/protocol/openid-connect/auth?kc_action=webauthn-register-passwordless&skip_if_exists=true&acr_values=http://example.com/loa/high",
+                  "type": "string"
+                },
+                {
+                  "key": "accessTokenUrl",
+                  "value": "{{baseUrl}}/realms/{{realm}}/protocol/openid-connect/token",
+                  "type": "string"
+                },
+                {
+                  "key": "clientId",
+                  "value": "{{clientExact}}",
+                  "type": "string"
+                },
+                {
+                  "key": "redirect_uri",
+                  "value": "{{redirectUri}}",
+                  "type": "string"
+                },
+                {
+                  "key": "scope",
+                  "value": "openid profile",
+                  "type": "string"
+                },
+                {
+                  "key": "state",
+                  "value": "poc",
+                  "type": "string"
+                },
+                {
+                  "key": "challengeAlgorithm",
+                  "value": "S256",
+                  "type": "string"
+                },
+                {
+                  "key": "client_authentication",
+                  "value": "body",
+                  "type": "string"
+                },
+                {
+                  "key": "addTokenTo",
+                  "value": "header",
+                  "type": "string"
+                },
+                {
+                  "key": "useBrowser",
+                  "value": true,
+                  "type": "boolean"
+                }
+              ]
+            },
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/realms/{{realm}}/protocol/openid-connect/userinfo",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "realms",
+                "{{realm}}",
+                "protocol",
+                "openid-connect",
+                "userinfo"
+              ]
+            },
+            "description": "Application-initiated action: offers passkey creation if the user has none (skippable). Needs a platform/virtual authenticator to complete."
+          },
+          "response": []
+        },
+        {
+          "name": "X.509 client cert (loa/x509)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "// Decode the Bearer access token Postman injected, log + visualize acr/amr.",
+                  "const auth = pm.request.headers.get('Authorization') || '';",
+                  "const jwt = auth.replace(/^Bearer\\s+/i, '');",
+                  "const parts = jwt.split('.');",
+                  "if (parts.length === 3) {",
+                  "  let b = parts[1].replace(/-/g, '+').replace(/_/g, '/');",
+                  "  while (b.length % 4) b += '=';",
+                  "  const c = JSON.parse(Buffer.from(b, 'base64').toString('utf8'));",
+                  "  pm.collectionVariables.set('accessToken', jwt);",
+                  "  console.log('acr =', c.acr, '| amr =', JSON.stringify(c.amr));",
+                  "  pm.test('acr claim present', () => pm.expect(c).to.have.property('acr'));",
+                  "  pm.test('amr claim present', () => pm.expect(c).to.have.property('amr'));",
+                  "  const tpl =",
+                  "    '<style>body{font-family:-apple-system,sans-serif;padding:8px}' +",
+                  "    'table{border-collapse:collapse;width:100%}td,th{border:1px solid #ccc;padding:6px 10px;text-align:left}' +",
+                  "    'th{background:#f4f4f4;white-space:nowrap}code{word-break:break-all;font-size:11px}</style>' +",
+                  "    '<h3>Access-token claims</h3><table>' +",
+                  "    '<tr><th>acr</th><td>{{acr}}</td></tr>' +",
+                  "    '<tr><th>amr</th><td>{{amr}}</td></tr>' +",
+                  "    '<tr><th>azp</th><td>{{azp}}</td></tr>' +",
+                  "    '<tr><th>preferred_username</th><td>{{user}}</td></tr>' +",
+                  "    '</table><p>Full token saved to collection variable <code>accessToken</code> ' +",
+                  "    '(Collection &rarr; Variables). Open the <b>Visualize</b> tab to see this.</p>';",
+                  "  pm.visualizer.set(tpl, { acr: c.acr, amr: JSON.stringify(c.amr), azp: c.azp, user: c.preferred_username });",
+                  "} else {",
+                  "  console.log('No JWT bearer yet \u2014 click \"Get New Access Token\", Use Token, then Send.');",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "auth": {
+              "type": "oauth2",
+              "oauth2": [
+                {
+                  "key": "tokenName",
+                  "value": "KC exact X509",
+                  "type": "string"
+                },
+                {
+                  "key": "grant_type",
+                  "value": "authorization_code_with_pkce",
+                  "type": "string"
+                },
+                {
+                  "key": "authUrl",
+                  "value": "{{baseUrlHttps}}/realms/{{realm}}/protocol/openid-connect/auth?acr_values=http://example.com/loa/x509",
+                  "type": "string"
+                },
+                {
+                  "key": "accessTokenUrl",
+                  "value": "{{baseUrlHttps}}/realms/{{realm}}/protocol/openid-connect/token",
+                  "type": "string"
+                },
+                {
+                  "key": "clientId",
+                  "value": "{{clientExact}}",
+                  "type": "string"
+                },
+                {
+                  "key": "redirect_uri",
+                  "value": "{{redirectUri}}",
+                  "type": "string"
+                },
+                {
+                  "key": "scope",
+                  "value": "openid profile",
+                  "type": "string"
+                },
+                {
+                  "key": "state",
+                  "value": "poc",
+                  "type": "string"
+                },
+                {
+                  "key": "challengeAlgorithm",
+                  "value": "S256",
+                  "type": "string"
+                },
+                {
+                  "key": "client_authentication",
+                  "value": "body",
+                  "type": "string"
+                },
+                {
+                  "key": "addTokenTo",
+                  "value": "header",
+                  "type": "string"
+                },
+                {
+                  "key": "useBrowser",
+                  "value": true,
+                  "type": "boolean"
+                }
+              ]
+            },
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrlHttps}}/realms/{{realm}}/protocol/openid-connect/userinfo",
+              "host": [
+                "{{baseUrlHttps}}"
+              ],
+              "path": [
+                "realms",
+                "{{realm}}",
+                "protocol",
+                "openid-connect",
+                "userinfo"
+              ]
+            },
+            "description": "Log in with a CLIENT CERTIFICATE over mutual TLS (:8443). X.509 is its own LoA level (acr_values=http://example.com/loa/x509, baked into the Auth URL); it requires a cert and has no password fallback.\n\nUse 'Authorize using browser' = ON. Import certs/alice.p12 (password 'changeit') into your OS keychain / browser cert store first \u2014 the system browser presents alice's cert during the TLS handshake and Keycloak logs you in (amr=[\"x509\"]).\n\nNOTE: Postman's own 'Settings > Certificates' client certs are NOT presented on the OAuth authorize leg, so the non-browser mode can't do mutual TLS here. For a headless check use scripts/test_x509.py."
+          },
+          "response": []
+        },
+        {
+          "name": "3 acr_values (low high x509 \u2192 highest=x509)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "// Decode the Bearer access token Postman injected, log + visualize acr/amr.",
+                  "const auth = pm.request.headers.get('Authorization') || '';",
+                  "const jwt = auth.replace(/^Bearer\\s+/i, '');",
+                  "const parts = jwt.split('.');",
+                  "if (parts.length === 3) {",
+                  "  let b = parts[1].replace(/-/g, '+').replace(/_/g, '/');",
+                  "  while (b.length % 4) b += '=';",
+                  "  const c = JSON.parse(Buffer.from(b, 'base64').toString('utf8'));",
+                  "  pm.collectionVariables.set('accessToken', jwt);",
+                  "  console.log('acr =', c.acr, '| amr =', JSON.stringify(c.amr));",
+                  "  pm.test('acr claim present', () => pm.expect(c).to.have.property('acr'));",
+                  "  pm.test('amr claim present', () => pm.expect(c).to.have.property('amr'));",
+                  "  const tpl =",
+                  "    '<style>body{font-family:-apple-system,sans-serif;padding:8px}' +",
+                  "    'table{border-collapse:collapse;width:100%}td,th{border:1px solid #ccc;padding:6px 10px;text-align:left}' +",
+                  "    'th{background:#f4f4f4;white-space:nowrap}code{word-break:break-all;font-size:11px}</style>' +",
+                  "    '<h3>Access-token claims</h3><table>' +",
+                  "    '<tr><th>acr</th><td>{{acr}}</td></tr>' +",
+                  "    '<tr><th>amr</th><td>{{amr}}</td></tr>' +",
+                  "    '<tr><th>azp</th><td>{{azp}}</td></tr>' +",
+                  "    '<tr><th>preferred_username</th><td>{{user}}</td></tr>' +",
+                  "    '</table><p>Full token saved to collection variable <code>accessToken</code> ' +",
+                  "    '(Collection &rarr; Variables). Open the <b>Visualize</b> tab to see this.</p>';",
+                  "  pm.visualizer.set(tpl, { acr: c.acr, amr: JSON.stringify(c.amr), azp: c.azp, user: c.preferred_username });",
+                  "} else {",
+                  "  console.log('No JWT bearer yet \u2014 click \"Get New Access Token\", Use Token, then Send.');",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "auth": {
+              "type": "oauth2",
+              "oauth2": [
+                {
+                  "key": "tokenName",
+                  "value": "KC exact 3-acr",
+                  "type": "string"
+                },
+                {
+                  "key": "grant_type",
+                  "value": "authorization_code_with_pkce",
+                  "type": "string"
+                },
+                {
+                  "key": "authUrl",
+                  "value": "{{baseUrlHttps}}/realms/{{realm}}/protocol/openid-connect/auth?acr_values=http://example.com/loa/low http://example.com/loa/high http://example.com/loa/x509",
+                  "type": "string"
+                },
+                {
+                  "key": "accessTokenUrl",
+                  "value": "{{baseUrlHttps}}/realms/{{realm}}/protocol/openid-connect/token",
+                  "type": "string"
+                },
+                {
+                  "key": "clientId",
+                  "value": "{{clientExact}}",
+                  "type": "string"
+                },
+                {
+                  "key": "redirect_uri",
+                  "value": "{{redirectUri}}",
+                  "type": "string"
+                },
+                {
+                  "key": "scope",
+                  "value": "openid profile",
+                  "type": "string"
+                },
+                {
+                  "key": "state",
+                  "value": "poc",
+                  "type": "string"
+                },
+                {
+                  "key": "challengeAlgorithm",
+                  "value": "S256",
+                  "type": "string"
+                },
+                {
+                  "key": "client_authentication",
+                  "value": "body",
+                  "type": "string"
+                },
+                {
+                  "key": "addTokenTo",
+                  "value": "header",
+                  "type": "string"
+                },
+                {
+                  "key": "useBrowser",
+                  "value": true,
+                  "type": "boolean"
+                }
+              ]
+            },
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrlHttps}}/realms/{{realm}}/protocol/openid-connect/userinfo",
+              "host": [
+                "{{baseUrlHttps}}"
+              ],
+              "path": [
+                "realms",
+                "{{realm}}",
+                "protocol",
+                "openid-connect",
+                "userinfo"
+              ]
+            },
+            "description": "Sends THREE space-separated acr_values: loa/low loa/high loa/x509. The native client policies (acr-condition + auth-flow-enforcer) route to the HIGHEST requested level -> loa/x509 (3), so this requires a client certificate over mutual TLS (:8443); acr=\u2026/loa/x509, amr=[\"x509\"]. (Keycloak's built-in step-up would instead collapse the list to the minimum, loa/low.)\n\nPrereqs = same as the X.509 request: 'Authorize using browser' ON, import certs/alice.p12 (password 'changeit') into your OS keychain, and trust certs/ca.crt (or disable SSL verification). Drop loa/x509 from the Auth URL to see the highest become loa/high (passkey) instead."
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Cumulative client (postman-cumulative)",
+      "description": "Built-in cumulative step-up: loa/low = password; default = password THEN passkey.",
+      "item": [
+        {
+          "name": "acr=loa/low \u2192 password",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "// Decode the Bearer access token Postman injected, log + visualize acr/amr.",
+                  "const auth = pm.request.headers.get('Authorization') || '';",
+                  "const jwt = auth.replace(/^Bearer\\s+/i, '');",
+                  "const parts = jwt.split('.');",
+                  "if (parts.length === 3) {",
+                  "  let b = parts[1].replace(/-/g, '+').replace(/_/g, '/');",
+                  "  while (b.length % 4) b += '=';",
+                  "  const c = JSON.parse(Buffer.from(b, 'base64').toString('utf8'));",
+                  "  pm.collectionVariables.set('accessToken', jwt);",
+                  "  console.log('acr =', c.acr, '| amr =', JSON.stringify(c.amr));",
+                  "  pm.test('acr claim present', () => pm.expect(c).to.have.property('acr'));",
+                  "  pm.test('amr claim present', () => pm.expect(c).to.have.property('amr'));",
+                  "  const tpl =",
+                  "    '<style>body{font-family:-apple-system,sans-serif;padding:8px}' +",
+                  "    'table{border-collapse:collapse;width:100%}td,th{border:1px solid #ccc;padding:6px 10px;text-align:left}' +",
+                  "    'th{background:#f4f4f4;white-space:nowrap}code{word-break:break-all;font-size:11px}</style>' +",
+                  "    '<h3>Access-token claims</h3><table>' +",
+                  "    '<tr><th>acr</th><td>{{acr}}</td></tr>' +",
+                  "    '<tr><th>amr</th><td>{{amr}}</td></tr>' +",
+                  "    '<tr><th>azp</th><td>{{azp}}</td></tr>' +",
+                  "    '<tr><th>preferred_username</th><td>{{user}}</td></tr>' +",
+                  "    '</table><p>Full token saved to collection variable <code>accessToken</code> ' +",
+                  "    '(Collection &rarr; Variables). Open the <b>Visualize</b> tab to see this.</p>';",
+                  "  pm.visualizer.set(tpl, { acr: c.acr, amr: JSON.stringify(c.amr), azp: c.azp, user: c.preferred_username });",
+                  "} else {",
+                  "  console.log('No JWT bearer yet \u2014 click \"Get New Access Token\", Use Token, then Send.');",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "auth": {
+              "type": "oauth2",
+              "oauth2": [
+                {
+                  "key": "tokenName",
+                  "value": "acr=loa/low \u2192 password",
+                  "type": "string"
+                },
+                {
+                  "key": "grant_type",
+                  "value": "authorization_code_with_pkce",
+                  "type": "string"
+                },
+                {
+                  "key": "authUrl",
+                  "value": "{{baseUrl}}/realms/{{realm}}/protocol/openid-connect/auth?acr_values=http://example.com/loa/low",
+                  "type": "string"
+                },
+                {
+                  "key": "accessTokenUrl",
+                  "value": "{{baseUrl}}/realms/{{realm}}/protocol/openid-connect/token",
+                  "type": "string"
+                },
+                {
+                  "key": "clientId",
+                  "value": "{{clientCumulative}}",
+                  "type": "string"
+                },
+                {
+                  "key": "redirect_uri",
+                  "value": "{{redirectUri}}",
+                  "type": "string"
+                },
+                {
+                  "key": "scope",
+                  "value": "openid profile",
+                  "type": "string"
+                },
+                {
+                  "key": "state",
+                  "value": "poc",
+                  "type": "string"
+                },
+                {
+                  "key": "challengeAlgorithm",
+                  "value": "S256",
+                  "type": "string"
+                },
+                {
+                  "key": "client_authentication",
+                  "value": "body",
+                  "type": "string"
+                },
+                {
+                  "key": "addTokenTo",
+                  "value": "header",
+                  "type": "string"
+                },
+                {
+                  "key": "useBrowser",
+                  "value": true,
+                  "type": "boolean"
+                }
+              ]
+            },
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/realms/{{realm}}/protocol/openid-connect/userinfo",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "realms",
+                "{{realm}}",
+                "protocol",
+                "openid-connect",
+                "userinfo"
+              ]
+            },
+            "description": "LoA 1: password only; token acr = .../loa/low, amr = [pwd]."
+          },
+          "response": []
+        },
+        {
+          "name": "Default \u2192 password + passkey (step-up)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "// Decode the Bearer access token Postman injected, log + visualize acr/amr.",
+                  "const auth = pm.request.headers.get('Authorization') || '';",
+                  "const jwt = auth.replace(/^Bearer\\s+/i, '');",
+                  "const parts = jwt.split('.');",
+                  "if (parts.length === 3) {",
+                  "  let b = parts[1].replace(/-/g, '+').replace(/_/g, '/');",
+                  "  while (b.length % 4) b += '=';",
+                  "  const c = JSON.parse(Buffer.from(b, 'base64').toString('utf8'));",
+                  "  pm.collectionVariables.set('accessToken', jwt);",
+                  "  console.log('acr =', c.acr, '| amr =', JSON.stringify(c.amr));",
+                  "  pm.test('acr claim present', () => pm.expect(c).to.have.property('acr'));",
+                  "  pm.test('amr claim present', () => pm.expect(c).to.have.property('amr'));",
+                  "  const tpl =",
+                  "    '<style>body{font-family:-apple-system,sans-serif;padding:8px}' +",
+                  "    'table{border-collapse:collapse;width:100%}td,th{border:1px solid #ccc;padding:6px 10px;text-align:left}' +",
+                  "    'th{background:#f4f4f4;white-space:nowrap}code{word-break:break-all;font-size:11px}</style>' +",
+                  "    '<h3>Access-token claims</h3><table>' +",
+                  "    '<tr><th>acr</th><td>{{acr}}</td></tr>' +",
+                  "    '<tr><th>amr</th><td>{{amr}}</td></tr>' +",
+                  "    '<tr><th>azp</th><td>{{azp}}</td></tr>' +",
+                  "    '<tr><th>preferred_username</th><td>{{user}}</td></tr>' +",
+                  "    '</table><p>Full token saved to collection variable <code>accessToken</code> ' +",
+                  "    '(Collection &rarr; Variables). Open the <b>Visualize</b> tab to see this.</p>';",
+                  "  pm.visualizer.set(tpl, { acr: c.acr, amr: JSON.stringify(c.amr), azp: c.azp, user: c.preferred_username });",
+                  "} else {",
+                  "  console.log('No JWT bearer yet \u2014 click \"Get New Access Token\", Use Token, then Send.');",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "auth": {
+              "type": "oauth2",
+              "oauth2": [
+                {
+                  "key": "tokenName",
+                  "value": "Default \u2192 password + passkey (step-up)",
+                  "type": "string"
+                },
+                {
+                  "key": "grant_type",
+                  "value": "authorization_code_with_pkce",
+                  "type": "string"
+                },
+                {
+                  "key": "authUrl",
+                  "value": "{{baseUrl}}/realms/{{realm}}/protocol/openid-connect/auth",
+                  "type": "string"
+                },
+                {
+                  "key": "accessTokenUrl",
+                  "value": "{{baseUrl}}/realms/{{realm}}/protocol/openid-connect/token",
+                  "type": "string"
+                },
+                {
+                  "key": "clientId",
+                  "value": "{{clientCumulative}}",
+                  "type": "string"
+                },
+                {
+                  "key": "redirect_uri",
+                  "value": "{{redirectUri}}",
+                  "type": "string"
+                },
+                {
+                  "key": "scope",
+                  "value": "openid profile",
+                  "type": "string"
+                },
+                {
+                  "key": "state",
+                  "value": "poc",
+                  "type": "string"
+                },
+                {
+                  "key": "challengeAlgorithm",
+                  "value": "S256",
+                  "type": "string"
+                },
+                {
+                  "key": "client_authentication",
+                  "value": "body",
+                  "type": "string"
+                },
+                {
+                  "key": "addTokenTo",
+                  "value": "header",
+                  "type": "string"
+                },
+                {
+                  "key": "useBrowser",
+                  "value": true,
+                  "type": "boolean"
+                }
+              ]
+            },
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/realms/{{realm}}/protocol/openid-connect/userinfo",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "realms",
+                "{{realm}}",
+                "protocol",
+                "openid-connect",
+                "userinfo"
+              ]
+            },
+            "description": "LoA 2: password THEN passkey. Completing this needs a registered passkey."
+          },
+          "response": []
+        }
+      ]
+    }
+  ]
+}

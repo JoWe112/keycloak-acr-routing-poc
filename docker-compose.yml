@@ -1,0 +1,48 @@
+# Keycloak 26.4 POC — passkey/password step-up by ACR, with amr claim.
+# Lean single-container dev setup: start-dev uses a file-based H2 database on a
+# named volume so passkey credentials survive restarts. Not for production
+# (see README "Production hardening").
+services:
+  keycloak:
+    image: quay.io/keycloak/keycloak:26.4@sha256:9409c59bdfb65dbffa20b11e6f18b8abb9281d480c7ca402f51ed3d5977e6007
+    container_name: kc-acr-poc
+    command:
+      - start-dev
+      - --import-realm
+      - --features=passkeys
+    environment:
+      KC_BOOTSTRAP_ADMIN_USERNAME: ${KC_ADMIN:-admin}
+      KC_BOOTSTRAP_ADMIN_PASSWORD: ${KC_ADMIN_PASSWORD:-admin}
+      KC_HTTP_ENABLED: "true"
+      KC_HOSTNAME_STRICT: "false"
+      KC_HEALTH_ENABLED: "true"
+      # HTTPS + mutual TLS, for the X.509 client-certificate login option.
+      # The cert is presented in the TLS handshake, so X.509 needs HTTPS (:8443).
+      KC_HTTPS_CERTIFICATE_FILE: /opt/keycloak/certs/server.crt
+      KC_HTTPS_CERTIFICATE_KEY_FILE: /opt/keycloak/certs/server.key
+      KC_HTTPS_CLIENT_AUTH: request           # accept (don't require) a client cert
+      KC_TRUSTSTORE_PATHS: /opt/keycloak/certs/ca.crt   # trust client certs from our CA
+    ports:
+      - "${KC_PORT:-8080}:8080"
+      - "${KC_HTTPS_PORT:-8443}:8443"
+    volumes:
+      - ./realm:/opt/keycloak/data/import:ro
+      # Custom SPIs: conditional-acr-exact + require-passkey-enrolment.
+      - ./providers/acr-exact-condition.jar:/opt/keycloak/providers/acr-exact-condition.jar:ro
+      # Demo PKI (server cert, CA truststore, alice's client cert) for X.509.
+      - ./certs:/opt/keycloak/certs:ro
+      # Mount the whole data dir (exists in the image, owned by the keycloak
+      # user) so the named volume inherits correct ownership and H2 persists.
+      - kc-data:/opt/keycloak/data
+    healthcheck:
+      # Enabling HTTPS moves the 9000 management interface (and /health) to TLS,
+      # which the image's shell can't probe (no curl, no TLS in /dev/tcp). Probe a
+      # public realm endpoint on the plain-HTTP port instead: 200 once serving.
+      test: ["CMD-SHELL", "exec 3<>/dev/tcp/localhost/8080 && printf 'GET /realms/master HTTP/1.1\\r\\nHost: localhost\\r\\nConnection: close\\r\\n\\r\\n' >&3 && head -1 <&3 | grep -q ' 200'"]
+      interval: 10s
+      timeout: 5s
+      retries: 30
+      start_period: 40s
+
+volumes:
+  kc-data:
