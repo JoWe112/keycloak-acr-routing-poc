@@ -30,8 +30,8 @@ adds the symmetric realm-level fallback for **Default ACR Values**. (Confirmed a
 
 ## Non-Goals
 
-- Changing how the *requested* ACR is compared/selected (that is the companion "OIDC ACR `Comparison`"
-  enhancement).
+- Changing how the *requested* ACR selects a method — that is already possible natively via client
+  policies (`acr-condition` + `auth-flow-enforcer`, since 26.2).
 - Broker/IdP forwarding of Default/Minimum ACR (see #42625).
 - SAML.
 

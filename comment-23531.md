@@ -16,9 +16,8 @@ the description):
 - map it in the OIDC error path (`AuthenticationProcessor` → `LoginProtocol.sendError`) to
   `error=unmet_authentication_requirements` in the authorization-response redirect.
 
-Note this is the **error side** of a broader gap: the OIDC `acr_values` handling itself lacks the
-exact/highest `Comparison` semantics that SAML step-up already has
-(`SamlProtocolUtils.checkLoAExact/Minimum/Maximum`). We've filed that separately as
-"OIDC: support ACR `Comparison` (exact/minimum/maximum) for `acr_values`" — `unmet_authentication_requirements`
-is exactly what a failed `exact` (or otherwise unsatisfiable) request should return. Happy to help with a
-PR here.
+This is the **error side** of ACR-based step-up. Selecting a method by ACR is already possible natively
+(client policies: `acr-condition` + `auth-flow-enforcer`, since 26.2), so an authorization request can
+legitimately require, say, a certificate; when that requirement can't be met,
+`unmet_authentication_requirements` is exactly the error that request should return instead of a generic
+one. Happy to help with a PR here.
