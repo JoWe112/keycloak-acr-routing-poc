@@ -1,7 +1,7 @@
 # Authentication flow deep dive
 
-This document explains the two browser flows, the Keycloak constraint that made a custom authenticator
-necessary, and how the `amr` claim is wired.
+This document explains how each ACR selects a login method (natively, via client policies), the
+routing-target flows, and how the `amr` claim is wired.
 
 ## The goal
 
@@ -186,7 +186,7 @@ the README.
 ## Automated integration test
 
 `providers-src` ships a JUnit 5 + Testcontainers integration test
-(`AcrExactConditionIT`) that boots a real Keycloak 26.4 container with the compiled provider mounted
+(`AcrRoutingIT`) that boots a real Keycloak 26.4 container with the compiled provider mounted
 and the actual `realm/poc-realm.json` imported, then drives authorization-code + PKCE logins and
 asserts:
 

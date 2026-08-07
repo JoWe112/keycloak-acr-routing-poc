@@ -5,10 +5,10 @@
     <modelVersion>4.0.0</modelVersion>
 
     <groupId>it.westlund.kc</groupId>
-    <artifactId>acr-exact-condition</artifactId>
+    <artifactId>keycloak-poc-providers</artifactId>
     <version>1.0.0</version>
     <packaging>jar</packaging>
-    <name>Keycloak ACR exact-match LoA condition</name>
+    <name>Keycloak PoC providers (passkey enrolment)</name>
 
     <properties>
         <maven.compiler.release>21</maven.compiler.release>
@@ -69,7 +69,7 @@
     </dependencies>
 
     <build>
-        <finalName>acr-exact-condition</finalName>
+        <finalName>keycloak-poc-providers</finalName>
 
         <!-- Import the real realm file from ../realm onto the test classpath
              (no duplication) so the IT boots Keycloak with the actual artifact. -->
