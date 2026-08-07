@@ -44,7 +44,7 @@ The only remaining custom code is one small authenticator, **`require-passkey-en
 > **History:** earlier revisions of this PoC did the routing with two custom SPIs
 > (`conditional-acr-exact` / `conditional-acr-highest`), on the assumption that vanilla Keycloak couldn't
 > select methods disjointly by ACR. That was **wrong for 26.2+** — the native client-policy flow selector
-> does exactly this — so those SPIs were removed. See [docs/authentication-flow.md](docs/authentication-flow.md).
+> does exactly this.
 
 ---
 
