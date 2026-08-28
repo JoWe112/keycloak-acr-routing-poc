@@ -248,6 +248,7 @@ scripts/
   test_x509.py                Scripted mutual-TLS login with alice's client cert
   verify.sh                   Run all smoke-test scenarios (incl. X.509)
 docs/authentication-flow.md   Deep dive: flows, the cumulative-vs-exact problem, AMR + X.509 wiring
+docs/porting-to-an-existing-realm.md  Admin-console runbook to set this up on another Keycloak
 ```
 
 ### Regenerating the realm
