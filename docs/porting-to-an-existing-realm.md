@@ -191,3 +191,65 @@ Run Authorization-Code + PKCE and inspect the token `acr` / `amr`:
 If a case misbehaves, check in order: SPI loaded (0.3) → ACR-to-LoA rows present (1.A) → each method step
 has its Reference value (2) → the client has the `acr-routing` **Default** scope (5) and each policy's
 `client-scopes` condition names it (4) → the client's **Default ACR Values** is set (5).
+
+---
+
+## Debugging the authentication flow
+
+Work from the outside in — the token tells you *what* happened, the logs tell you *why*.
+
+**1. Read the token first — it shows which flow actually ran.** Decode the ID/access token (any JWT
+decoder) and look at:
+- **`acr`** — the LoA that was achieved, which maps back (through the realm ACR→LoA map) to the flow that
+  ran. A wrong `acr` means wrong routing → a policy/condition problem (§4) or the wrong Default ACR (§5).
+- **`amr`** — missing/empty means the AMR mapper isn't on the client (§5) or a step's **Reference value**
+  is unset (§2).
+
+**2. Turn on login events (console).** Enable saving **User events** (Realm settings → the events/**User
+events** config), reproduce the login, then read the **Events** list. A `LOGIN_ERROR` row's **error** and
+details (e.g. `invalid_user_credentials`, certificate errors) pinpoint the failing step; a successful
+`LOGIN` row shows the client and identity that resolved.
+
+**3. Targeted server debug logging (the most detailed view).** Start Keycloak with these categories
+(env `KC_LOG_LEVEL`, or `--log-level`):
+
+```
+INFO,org.keycloak.authentication:debug,org.keycloak.services.clientpolicy:trace,org.keycloak.events:debug
+```
+
+- `org.keycloak.authentication` (debug) — every executor and requirement decision as the flow runs; you
+  see exactly which steps executed vs skipped (e.g. the `pk-has` / `pk-no` conditionals).
+- `org.keycloak.services.clientpolicy` (trace) — client-policy evaluation: whether `acr-condition`
+  matched the requested ACR and whether `auth-flow-enforcer` set the flow. **This is where you confirm
+  routing fired** (or why it didn't).
+- `org.keycloak.events` (debug) — writes each event inline in the server log.
+
+**4. Drive the authorization endpoint directly — no app needed.** Open this in a browser and watch the
+pages, varying (or dropping) `acr_values`:
+
+```
+https://KC/realms/REALM/protocol/openid-connect/auth?client_id=CLIENT&response_type=code&scope=openid&redirect_uri=REDIRECT&acr_values=http://example.com/loa/high
+```
+
+Confirm the first page is the expected method. The Network tab shows the final redirect carrying `code=`
+(success) or `error=` (failure).
+
+**5. Method-specific**
+- **Passkey:** Chrome DevTools → **WebAuthn** tab → enable a *virtual authenticator* to enrol / log in
+  without hardware. No enrolment page → recheck the WebAuthn Passwordless policy (§1.B) and that
+  **Require passkey enrolment** is REQUIRED inside `pk-no` (§2).
+- **X.509:** confirm the browser actually presented a certificate (you got the cert picker / TLS
+  handshake succeeded). No prompt → `KC_HTTPS_CLIENT_AUTH` / server-cert issue (§0.4); *unknown user* →
+  the SAN-email→account mapping (§0.4, §2); *untrusted cert* → the issuing CA isn't in
+  `KC_TRUSTSTORE_PATHS` (§0.4).
+
+**Symptom → likely cause**
+
+| Symptom | Look at |
+|---|---|
+| Always the same method regardless of `acr_values` | policy disabled / wrong `acr-condition` value / client missing the `acr-routing` scope (§4, §5) |
+| *Every* client gets routed | condition uses `any-client` or the built-in `acr` scope instead of `acr-routing` (§3, §4) |
+| Multi-value picks the **lowest** | policy order — must be low → high → x509 (§4) |
+| No `amr` in the token | AMR mapper missing on the client (§5) or Reference value unset on the step (§2) |
+| `acr` present but numeric/unexpected | realm ACR→LoA map missing or mismatched (§1.A) |
+| Routing ignored, the client's browser flow runs | the client has a **Browser flow override** set — remove it (§5) |
