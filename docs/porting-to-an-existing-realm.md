@@ -107,6 +107,12 @@ get ACR routing:
    `openid-connect`, **Include in token scope = Off** (it's only a marker; add no mappers).
 2. You'll attach it to your app client in step 5.
 
+> **Don't reuse the built-in `acr` scope for this.** Keycloak ships an `acr` client scope (it carries the
+> `acr loa level` mapper) that is assigned as a **Default** scope to *every* client — so a `client-scopes`
+> condition on `acr` would match all clients and route the whole realm. The point of `acr-routing` is that
+> it's a *sparse* marker present only on the clients you deliberately assign it to. (If you genuinely want
+> every client routed, skip this scope and use an `any-client` condition in step 4 instead.)
+
 ---
 
 ## 4. Client policies — the actual ACR→flow routing (Realm settings → Client policies)
