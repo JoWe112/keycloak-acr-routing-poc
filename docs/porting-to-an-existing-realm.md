@@ -18,6 +18,14 @@ Everything below is clickable in the console. Two substitutions make that possib
 ACR values used throughout: `low = http://example.com/loa/low`, `high = http://example.com/loa/high`,
 `x509 = http://example.com/loa/x509`. Rename them consistently if you prefer your own URIs.
 
+> **How this differs from the PoC realm.** The PoC scopes routing with a custom **client attribute**
+> (`acr.flow.routing=enabled`, matched by a `client-attributes` policy condition), set over the REST API.
+> There is **no `acr-routing` scope in the PoC** — that scope is introduced here purely as the
+> console-clickable substitute (matched by a `client-scopes` condition), since custom client attributes
+> can't be set in the console. The built-in **`acr`** scope you'll see on every client is Keycloak's own
+> (it holds the `acr loa level` mapper) and is unrelated to routing selection — don't reuse it as the
+> selector (see step 3).
+
 ---
 
 ## 0. Server prerequisites (host-level, before the console work)
