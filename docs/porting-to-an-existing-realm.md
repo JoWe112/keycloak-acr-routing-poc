@@ -253,3 +253,5 @@ Confirm the first page is the expected method. The Network tab shows the final r
 | No `amr` in the token | AMR mapper missing on the client (§5) or Reference value unset on the step (§2) |
 | `acr` present but numeric/unexpected | realm ACR→LoA map missing or mismatched (§1.A) |
 | Routing ignored, the client's browser flow runs | the client has a **Browser flow override** set — remove it (§5) |
+| Server log shows `POLICY UNSATISFIED` + `client-attributes` **NEGATIVE** on every policy | the policies still use the PoC's `client-attributes` scoping (`acr.flow.routing`), which **can't be set from the console** — switch each policy to a `client-scopes` condition on `acr-routing` (§3, §4) |
+| `acr` always comes back `…/loa/low` even though the right method ran | the enforcer never ran, so no LoA was stamped (see the row above) — routing must actually fire; also confirm the realm map has the `…/loa/x509 → 3` row (§1.A) |
